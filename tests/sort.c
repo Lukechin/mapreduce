@@ -6,6 +6,8 @@
 #include "list.h"
 #include "threadpool.h"
 
+#define PROFILE
+
 #ifdef PROFILE
 #include "yastopwatch.h"
 
@@ -113,7 +115,7 @@ void my_finish(void *self, void *first_element)
 
 int main(int argc, char *argv[])
 {
-    void *pool;
+    threadpool_t *pool;
     llist_t *raw_data;
     llist_t **input_data;
     llist_t *output_data;
@@ -170,17 +172,7 @@ int main(int argc, char *argv[])
     llist_destroy(raw_data);
 
 
-    pool = tpool_init(threads);
-
-#ifdef PROFILE
-    START_SW(map_time);
-#endif
-
-    threadpool_map(pool, data_size, my_map, input_data, 0);
-
-#ifdef PROFILE
-    STOP_SW(map_time);
-#endif
+    pool = threadpool_create(threads, queue_size, 0);
 
     threadpool_reduce_t reduce = {
         .begin = input_data,
@@ -197,13 +189,13 @@ int main(int argc, char *argv[])
     START_SW(reduce_time);
 #endif
 
-    threadpool_reduce(pool, &reduce);
+    mapreduce(pool, data_size, /* task num*/16, my_map, input_data, 0, &reduce);
 
 #ifdef PROFILE
     STOP_SW(reduce_time);
 #endif
 
-    tpool_destroy(pool, 0);
+    threadpool_destroy(pool, 0);
 
     for (i = 0; i < data_size; ++i) {
         // nodes have been moved to output_data

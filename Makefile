@@ -76,7 +76,7 @@ check: $(TESTS)
 
 sort: tests/sort tests/input_generator
 	./tests/input_generator 10000 10000
-	./tests/sort input.txt 8 255
+	./tests/sort input.txt 32 256
 	@sort -n input.txt > check.txt
 	@diff output.txt check.txt && echo "sort testing succeed !"
 
@@ -84,18 +84,23 @@ sort_bench: tests/sort tests/input_generator
 	rm sort_bench_*.txt sort_bench_*.csv \
 		|| echo "sort data has been empty" \
 		&& echo "clean sort data"
-	@for i in `seq 100 100 10000`; do \
+	@for i in `seq 500 500 10000`; do \
 		./tests/input_generator $$i 10000; \
-		for j in 1 2 4 8 16 32 64 128 256 512 1024; do \
+		for j in 1 2 4 8 16; do \
 			echo sort $$i datas in input.txt with $$j thread, 256 queue_size ; \
 			echo "[sort_num] $$i" >> sort_bench_$$j.txt ; \
+			echo 3 | sudo tee /proc/sys/vm/drop_caches; \
 			./tests/sort input.txt $$j 256 2>> sort_bench_$$j.txt ; \
 		done; \
 	done
-	@for i in 1 2 4 8 16 32 64 128 256 512 1024; do \
+	@for i in 1 2 4 8 16; do \
 		./scripts/sort_bench_parse.py sort_bench_$$i.txt; \
 	done
 	gnuplot ./scripts/sort_runtime.gp
 
+py:
+	@for i in 1 2 4 8 16; do \
+		./scripts/sort_bench_parse.py sort_bench_$$i.txt; \
+	done
 
 -include $(deps)
